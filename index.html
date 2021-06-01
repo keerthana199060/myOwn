@@ -12,3 +12,10 @@ kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets
 
 
 https://minikube.sigs.k8s.io/docs/start/
+
+kubectl create serviceaccount dashboard -n default
+
+kubectl create clusterrolebinding dashboard-admin -n default \
+  --clusterrole=cluster-admin \
+  --serviceaccount=default:dashboard
+
