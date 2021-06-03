@@ -26,3 +26,8 @@ https://www.digitalocean.com/community/tutorials/how-to-install-prometheus-on-ub
 
 
 https://github.com/keerthana199060/hellonode/blob/master/Jenkinsfile
+
+cd /var/lib/jenkins/workspace/gitjava/java-docker-example
+docker build -t keerthana199060/java-example1 .
+docker login -u="*****" -p="*****"
+docker push keerthana199060/java-example1:latest
