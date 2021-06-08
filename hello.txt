@@ -1,61 +1,121 @@
-Hey all....   
-
-
-class Example { 
-   static void main(String[] args) { 
-      //Example of a int datatype 
-      int x = 5; 
-		
-      //Example of a long datatype 
-      long y = 100L; 
-		
-      //Example of a floating point datatype 
-      float a = 10.56f; 
-		
-      //Example of a double datatype 
-      double b = 10.5e40; 
-		
-      //Example of a BigInteger datatype 
-      BigInteger bi = 30g; 
-		
-      //Example of a BigDecimal datatype 
-      BigDecimal bd = 3.5g; 
-		
-      println(x); 
-      println(y); 
-      println(a); 
-      println(b); 
-      println(bi); 
-      println(bd); 
-   } 
+buildPipelineView('DevOps Task6') {
+    filterBuildQueue()
+    filterExecutors()
+    title('DevOps Task6 CICD Build Pipeline')
+    displayedBuilds(5)
+    selectedJob('task6_job1')
+    alwaysAllowManualTrigger()
+    showPipelineParameters()
+    refreshFrequency(60)
 }
-
-
-class Example { 
-   static void main(String[] args) { 
-      // Defining a variable in lowercase  
-      int x = 5;
-	  
-      // Defining a variable in uppercase  
-      int X = 6; 
-	  
-      // Defining a variable with the underscore in it's name 
-      def _Name = "Joe"; 
-		
-      println(x); 
-      println(X); 
-      println(_Name); 
-   } 
+job("task6_job1")
+{
+  description("Pulling github repo")
+  scm
+  {
+      github('saurabhagarwal43800/Creating-a-CI-CD-Build-Pipeline-using-Groovy','master')
+  }
+  triggers
+  {
+      scm("* * * * *")
+  }
+  steps
+  {
+      shell('''if sudo [ ! -d "/root/Desktop/devOpsTask6" ]
+then
+ sudo mkdir /root/Desktop/devOpsTask6
+ sudo cp -vrf * /root/Desktop/devOpsTask6
+else
+ sudo rm -rf /root/Desktop/devOpsTask6/*
+ sudo cp -vrf * /root/Desktop/devOpsTask6
+fi''')
+  }
 }
-
-
-class Example { 
-   static void main(String[] args) { 
-      //Initializing 2 variables 
-      int x = 5; 
-      int X = 6; 
-	  
-      //Printing the value of the variables to the console 
-      println("The value of x is " + x + "The value of X is " + X);  
-   }
+job("task6_job2")
+{
+  description("Interpreting languages")
+  triggers
+  {
+    upstream("task6_github",'SUCCESS')
+  }
+  steps
+  {
+    shell('''if sudo ls /root/Desktop/devOpsTask6 | grep html-app
+then
+ sudo kubectl apply -f /root/Desktop/devOpsTask6/html-app/html-pod-pvc.yml
+ sudo sleep 10
+ sudo kubectl cp /root/Desktop/devOpsTask6/html-app/ html-pod:/var/www/html/
+else
+ echo "No html folder present!"
+fi
+if sudo ls /root/Desktop/devOpsTask6 | grep php-app
+then
+ sudo kubectl apply -f /root/Desktop/devOpsTask6/php-app/php-pod-pvc.yml
+ sudo sleep 10
+ sudo kubectl cp /root/Desktop/devOpsTask6/php-app/ php-pod:/var/www/html/
+else
+ echo "No php folder present!"
+fi''')
+  }
+}
+job("task6_job3")
+{
+  description("Checking Status Code")
+  triggers
+  {
+    upstream("task6_job2",'FAILURE')
+  }
+  steps
+  {
+    shell('''html_status=$(curl -o /dev/null -s -w "%{http_code}" http://192.168.99.106:30002/html-app/)
+php_status=$(curl -o /dev/null -s -w "%{http_code}" http://192.168.99.106:30001/php-app/)
+if [ $html_status == 200 ]
+then
+ if [ $php_status == 200 ]
+ then
+  exit 0
+ else
+  exit 1
+ fi
+else
+ exit 1
+fi''')
+  }
+  publishers
+  {
+ mailer("saurabhagarwal43800@gmail.com", false, false)
+  }
+}
+job("task6_job4")
+{
+  description("Monitoring the Application")
+  triggers
+  {
+    scm("* * * * *")
+    upstream("task6_job3",'FAILURE')
+  }
+  steps
+  {
+    shell('''if sudo kubectl get po | grep html-pod | grep Running
+then
+ if sudo kubectl get po | grep php-pod | grep Running
+ then
+  exit 0
+ else
+  exit 1
+ fi
+else
+ exit 1
+fi''')
+  }
+  publishers {
+        downstreamParameterized {
+            trigger('task6_job3') {
+                condition('UNSTABLE_OR_BETTER')
+                parameters {
+                    currentBuild()
+                }
+            }
+        }
+    }
 }
